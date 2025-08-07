@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Project, Application, Message, Conversation, User } from '../types';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, Timestamp, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, Timestamp, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 
 // Firebase config
 const firebaseConfig = {
@@ -28,6 +28,7 @@ interface AppContextType {
   applyToProject: (projectId: string, message: string) => void;
   sendMessage: (receiverId: string, content: string) => void;
   getConversation: (userId: string) => Conversation | null;
+  updateApplicationStatus: (applicationId: string, status: 'pending' | 'accepted' | 'rejected' | 'interview') => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -102,23 +103,16 @@ const mockUsers: User[] = [
 export function AppProvider({ children }: { children: ReactNode }) {
   // Projects from Firestore
   const [projects, setProjects] = useState<Project[]>([]);
-  const [applications, setApplications] = useState<Application[]>(() => {
-    const stored = localStorage.getItem('applications');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed.map((a: any) => ({ ...a, createdAt: new Date(a.createdAt) }));
-    }
-    return [];
-  });
+  // Applications from Firestore (real-time)
+  const [applications, setApplications] = useState<Application[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users] = useState<User[]>(mockUsers);
 
-  // Load projects from Firestore on mount
+  // Real-time projects
   useEffect(() => {
-    const fetchProjects = async () => {
-      const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
+    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const loaded: Project[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -129,14 +123,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
       });
       setProjects(loaded);
-    };
-    fetchProjects();
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Persist applications to localStorage
+  // Real-time applications
   useEffect(() => {
-    localStorage.setItem('applications', JSON.stringify(applications));
-  }, [applications]);
+    const q = query(collection(db, 'applications'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const loaded: Application[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loaded.push({
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        });
+      });
+      setApplications(loaded);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Add new project to Firestore
   const createProject = async (projectData: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => {
@@ -148,24 +155,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applications: [],
       createdAt: Timestamp.fromDate(new Date()),
     };
-    const docRef = await addDoc(collection(db, 'projects'), newProject);
-    setProjects(prev => [{ ...newProject, id: docRef.id, createdAt: new Date() }, ...prev]);
+    await addDoc(collection(db, 'projects'), newProject);
   };
 
-  const applyToProject = (projectId: string, message: string) => {
-    // Mock application - would normally require authentication
+  // Add new application to Firestore
+  const applyToProject = async (projectId: string, message: string) => {
     const userId = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).id : '1';
     const user = users.find(u => u.id === userId) || users[0];
-    const newApplication: Application = {
-      id: Date.now().toString(),
+    const newApplication = {
       userId: user.id,
       user,
       projectId,
       message,
       status: 'pending',
-      createdAt: new Date(),
+      createdAt: Timestamp.fromDate(new Date()),
     };
-    setApplications(prev => [...prev, newApplication]);
+    await addDoc(collection(db, 'applications'), newApplication);
+  };
+
+  // Update application status (accept/reject/interview)
+  const updateApplicationStatus = async (applicationId: string, status: 'pending' | 'accepted' | 'rejected' | 'interview') => {
+    const applicationRef = doc(db, 'applications', applicationId);
+    await updateDoc(applicationRef, { status });
   };
 
   const sendMessage = (receiverId: string, content: string) => {
@@ -197,6 +208,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applyToProject,
       sendMessage,
       getConversation,
+      updateApplicationStatus, // <-- export this
     }}>
       {children}
     </AppContext.Provider>

@@ -19,13 +19,15 @@ import {
 
 export function ProjectDetailPage() {
   const { id } = useParams();
-  const { projects, applyToProject } = useApp();
+  const { projects, applications, updateApplicationStatus } = useApp();
   const { user } = useAuth();
   const [applicationMessage, setApplicationMessage] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
 
   const project = projects.find(p => p.id === id);
+  // Get all applications for this project
+  const projectApplications = applications.filter(app => app.projectId === id);
 
   if (!project) {
     return (
@@ -219,6 +221,52 @@ export function ProjectDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Owner: Applications Management */}
+      {user && project && user.id === project.authorId && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Applications to This Project</h2>
+          {projectApplications.length === 0 ? (
+            <p className="text-gray-600">No one has applied yet.</p>
+          ) : (
+            <ul className="space-y-4">
+              {projectApplications.map((app) => (
+                <li key={app.id} className="border-b last:border-b-0 pb-4">
+                  <div className="flex items-center space-x-4 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">{app.user.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900">{app.user.name}</div>
+                      <div className="text-xs text-gray-500">{app.user.email}</div>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ml-1 ${getRoleColor(app.user.role)}`}>{app.user.role}</span>
+                    </div>
+                    <span className={`ml-4 text-xs px-2 py-1 rounded-full ${app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : app.status === 'accepted' ? 'bg-green-100 text-green-800' : app.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span>
+                  </div>
+                  <div className="mb-2 text-gray-700"><span className="font-medium">Message:</span> {app.message}</div>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                      disabled={app.status === 'accepted'}
+                      onClick={() => updateApplicationStatus(app.id, 'accepted')}
+                    >Accept</button>
+                    <button
+                      className="px-3 py-1 rounded bg-yellow-500 text-white text-xs font-medium hover:bg-yellow-600 disabled:opacity-50"
+                      disabled={app.status === 'interview'}
+                      onClick={() => updateApplicationStatus(app.id, 'interview')}
+                    >Interview</button>
+                    <button
+                      className="px-3 py-1 rounded bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-50"
+                      disabled={app.status === 'rejected'}
+                      onClick={() => updateApplicationStatus(app.id, 'rejected')}
+                    >Reject</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Application Section */}
       {user && user.id !== project.authorId && (

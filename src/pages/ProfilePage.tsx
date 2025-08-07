@@ -395,9 +395,16 @@ export function ProfilePage() {
               <li key={project.id} className="border-b last:border-b-0 pb-2">
                 <span className="font-medium text-blue-700">{project.title}</span>
                 <span className="ml-2 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{project.type}</span>
-                <span className={`ml-2 text-xs px-2 py-1 rounded-full ${application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : application.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                </span>
+                <span className={`ml-2 text-xs px-2 py-1 rounded-full ${application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : application.status === 'accepted' ? 'bg-green-100 text-green-800' : application.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>{application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>
+                {application.status === 'accepted' && (
+                  <span className="ml-2 text-green-700 text-xs">Congratulations! You have been accepted.</span>
+                )}
+                {application.status === 'rejected' && (
+                  <span className="ml-2 text-red-700 text-xs">Sorry, your application was not successful.</span>
+                )}
+                {application.status === 'interview' && (
+                  <span className="ml-2 text-yellow-700 text-xs">You have been shortlisted for an interview!</span>
+                )}
               </li>
             ))}
           </ul>
