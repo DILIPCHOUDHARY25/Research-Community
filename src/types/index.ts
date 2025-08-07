@@ -35,15 +35,15 @@ export interface Project {
   description: string;
   authorId: string;
   author: User;
-  timeline: string;
-  rolesNeeded: string[];
-  type: ProjectType;
+  requirements: string[];
+  budget: string;
+  duration: string;
   tags: string[];
   applications: Application[];
   createdAt: Date;
-  isActive: boolean;
+  status: 'active' | 'inactive' | 'completed';
   location?: string;
-  isRemote: boolean;
+  isRemote?: boolean;
 }
 
 export type ProjectType = 'internship' | 'collaboration' | 'startup' | 'hackathon';
@@ -58,7 +58,7 @@ export interface Application {
   createdAt: Date;
 }
 
-export type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
+export type ApplicationStatus = 'pending' | 'accepted' | 'rejected' | 'interview';
 
 export interface Message {
   id: string;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Project, ProjectType } from '../types';
+import { Project } from '../types';
 import { Plus, Filter, MapPin, Clock, Users, Search, Briefcase, Users as UsersIcon, Lightbulb, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -9,15 +9,7 @@ export function ProjectsPage() {
   const { projects } = useApp();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<ProjectType | ''>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  const projectTypes = [
-    { id: 'internship', label: 'Internship', icon: <Briefcase className="w-4 h-4" /> },
-    { id: 'collaboration', label: 'Collaboration', icon: <UsersIcon className="w-4 h-4" /> },
-    { id: 'startup', label: 'Startup', icon: <Lightbulb className="w-4 h-4" /> },
-    { id: 'hackathon', label: 'Hackathon', icon: <Trophy className="w-4 h-4" /> },
-  ];
 
   const allTags = Array.from(new Set(projects.flatMap(p => p.tags)));
 
@@ -26,12 +18,10 @@ export function ProjectsPage() {
                          project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.author.name.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = !selectedType || project.type === selectedType;
-    
     const matchesTags = selectedTags.length === 0 || 
                        selectedTags.some(tag => project.tags.includes(tag));
 
-    return matchesSearch && matchesType && matchesTags;
+    return matchesSearch && matchesTags;
   });
 
   const handleTagToggle = (tag: string) => {
@@ -42,9 +32,7 @@ export function ProjectsPage() {
     );
   };
 
-  const getProjectTypeInfo = (type: ProjectType) => {
-    return projectTypes.find(t => t.id === type) || projectTypes[0];
-  };
+
 
   const getRoleColor = (role: string) => {
     const colors = {
@@ -100,36 +88,7 @@ export function ProjectsPage() {
             </div>
           </div>
 
-          {/* Project Types */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Project Type</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedType('')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedType === '' 
-                    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                All Types
-              </button>
-              {projectTypes.map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setSelectedType(type.id as ProjectType)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 ${
-                    selectedType === type.id 
-                      ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {type.icon}
-                  <span>{type.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+
 
           {/* Tags */}
           <div>
@@ -179,9 +138,8 @@ export function ProjectsPage() {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {getProjectTypeInfo(project.type).icon}
-                <span className="text-sm text-gray-600 capitalize">
-                  {project.type}
+                <span className="text-sm text-gray-600">
+                  {project.status}
                 </span>
               </div>
             </div>
@@ -199,11 +157,11 @@ export function ProjectsPage() {
             <div className="flex items-center space-x-4 mb-4 text-sm text-gray-500">
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>{project.timeline}</span>
+                <span>{project.duration}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Users className="w-4 h-4" />
-                <span>{project.rolesNeeded.length} roles needed</span>
+                <span>{project.requirements.length} requirements</span>
               </div>
               {project.location && (
                 <div className="flex items-center space-x-1">

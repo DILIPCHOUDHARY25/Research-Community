@@ -1,22 +1,24 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Project, Application, Message, Conversation, User } from '../types';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, Timestamp, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+
+// Temporarily disable Firebase for build
+// import { initializeApp } from 'firebase/app';
+// import { getFirestore, collection, getDocs, addDoc, Timestamp, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 
 // Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyCYPUPc6wZrqP1-Y5TUieIcDaXtUolJrJs",
-  authDomain: "research-community-ce9af.firebaseapp.com",
-  projectId: "research-community-ce9af",
-  storageBucket: "research-community-ce9af.firebasestorage.app",
-  messagingSenderId: "426974432294",
-  appId: "1:426974432294:web:d5dcfcb020e2808fc5aae7",
-  measurementId: "G-Z925P35N21"
-};
+// const firebaseConfig = {
+//   apiKey: "AIzaSyCYPUPc6wZrqP1-Y5TUieIcDaXtUolJrJs",
+//   authDomain: "research-community-ce9af.firebaseapp.com",
+//   projectId: "research-community-ce9af",
+//   storageBucket: "research-community-ce9af.firebasestorage.app",
+//   messagingSenderId: "426974432294",
+//   appId: "1:426974432294:web:d5dcfcb020e2808fc5aae7",
+//   measurementId: "G-Z925P35N21"
+// };
 
 // Initialize Firebase
-const firebaseApp = initializeApp(firebaseConfig);
-export const db = getFirestore(firebaseApp);
+// const firebaseApp = initializeApp(firebaseConfig);
+// export const db = getFirestore(firebaseApp);
 
 interface AppContextType {
   projects: Project[];
@@ -101,82 +103,101 @@ const mockUsers: User[] = [
 ];
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Projects from Firestore
+  // Mock data for projects and applications
   const [projects, setProjects] = useState<Project[]>([]);
-  // Applications from Firestore (real-time)
   const [applications, setApplications] = useState<Application[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users] = useState<User[]>(mockUsers);
 
-  // Real-time projects
+  // Mock projects data
   useEffect(() => {
-    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const loaded: Project[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        loaded.push({
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-        });
-      });
-      setProjects(loaded);
-    });
-    return () => unsubscribe();
+    const mockProjects: Project[] = [
+      {
+        id: '1',
+        title: 'AI-Powered Drug Discovery Platform',
+        description: 'Developing machine learning algorithms to accelerate drug discovery processes for rare diseases.',
+        requirements: ['Python', 'TensorFlow', 'Bioinformatics', 'PhD in relevant field'],
+        budget: '$50,000 - $100,000',
+        duration: '6-12 months',
+        author: mockUsers[1], // Bob Rodriguez
+        authorId: '2',
+        applications: [],
+        createdAt: new Date('2024-01-15'),
+        status: 'active',
+        tags: ['AI', 'Biotech', 'Drug Discovery', 'Machine Learning'],
+      },
+      {
+        id: '2',
+        title: 'Quantum Computing Research Assistant',
+        description: 'Seeking a research assistant to help with quantum algorithm development and error correction research.',
+        requirements: ['Quantum Physics', 'Python', 'Linear Algebra', 'Graduate student or recent PhD'],
+        budget: '$30,000 - $60,000',
+        duration: '12 months',
+        author: mockUsers[2], // Dr. Carol Zhang
+        authorId: '3',
+        applications: [],
+        createdAt: new Date('2024-01-10'),
+        status: 'active',
+        tags: ['Quantum Computing', 'Physics', 'Research', 'Algorithms'],
+      },
+    ];
+    setProjects(mockProjects);
   }, []);
 
-  // Real-time applications
+  // Mock applications data
   useEffect(() => {
-    const q = query(collection(db, 'applications'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const loaded: Application[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        loaded.push({
-          ...data,
-          id: doc.id,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-        });
-      });
-      setApplications(loaded);
-    });
-    return () => unsubscribe();
+    const mockApplications: Application[] = [
+      {
+        id: '1',
+        userId: '1',
+        user: mockUsers[0],
+        projectId: '1',
+        message: 'I have extensive experience in computer vision and would love to contribute to this drug discovery project.',
+        status: 'pending',
+        createdAt: new Date('2024-01-20'),
+      },
+    ];
+    setApplications(mockApplications);
   }, []);
 
-  // Add new project to Firestore
+  // Add new project to mock data
   const createProject = async (projectData: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => {
     const author = users.find(u => u.id === projectData.authorId);
     if (!author) return;
-    const newProject = {
+    const newProject: Project = {
       ...projectData,
+      id: Date.now().toString(),
       author,
       applications: [],
-      createdAt: Timestamp.fromDate(new Date()),
+      createdAt: new Date(),
     };
-    await addDoc(collection(db, 'projects'), newProject);
+    setProjects(prev => [newProject, ...prev]);
   };
 
-  // Add new application to Firestore
+  // Add new application to mock data
   const applyToProject = async (projectId: string, message: string) => {
     const userId = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).id : '1';
     const user = users.find(u => u.id === userId) || users[0];
-    const newApplication = {
+    const newApplication: Application = {
+      id: Date.now().toString(),
       userId: user.id,
       user,
       projectId,
       message,
       status: 'pending',
-      createdAt: Timestamp.fromDate(new Date()),
+      createdAt: new Date(),
     };
-    await addDoc(collection(db, 'applications'), newApplication);
+    setApplications(prev => [newApplication, ...prev]);
   };
 
   // Update application status (accept/reject/interview)
   const updateApplicationStatus = async (applicationId: string, status: 'pending' | 'accepted' | 'rejected' | 'interview') => {
-    const applicationRef = doc(db, 'applications', applicationId);
-    await updateDoc(applicationRef, { status });
+    setApplications(prev => 
+      prev.map(app => 
+        app.id === applicationId ? { ...app, status } : app
+      )
+    );
   };
 
   const sendMessage = (receiverId: string, content: string) => {

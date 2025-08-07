@@ -1,15 +1,7 @@
 import React, { useState, useRef, ChangeEvent, FormEvent, FocusEvent } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
-import { ProjectType } from '../types';
 import { useNavigate } from 'react-router-dom';
-
-const PROJECT_TYPES: { id: ProjectType; label: string }[] = [
-  { id: 'internship', label: 'Internship' },
-  { id: 'collaboration', label: 'Collaboration' },
-  { id: 'startup', label: 'Startup' },
-  { id: 'hackathon', label: 'Hackathon' },
-];
 
 export function NewProjectPage() {
   const { createProject } = useApp();
@@ -18,13 +10,12 @@ export function NewProjectPage() {
 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [type, setType] = useState<ProjectType>('internship');
   const [tags, setTags] = useState<string>('');
-  const [timeline, setTimeline] = useState<string>('');
+  const [requirements, setRequirements] = useState<string>('');
+  const [budget, setBudget] = useState<string>('');
+  const [duration, setDuration] = useState<string>('');
   const [location, setLocation] = useState<string>('');
   const [isRemote, setIsRemote] = useState<boolean>(false);
-  const [rolesNeeded, setRolesNeeded] = useState<string>('');
-  const [isActive, setIsActive] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -33,8 +24,9 @@ export function NewProjectPage() {
   // Refs for focusing
   const titleRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  const timelineRef = useRef<HTMLInputElement>(null);
-  const rolesRef = useRef<HTMLInputElement>(null);
+  const requirementsRef = useRef<HTMLInputElement>(null);
+  const budgetRef = useRef<HTMLInputElement>(null);
+  const durationRef = useRef<HTMLInputElement>(null);
 
   if (!user) {
     return (
@@ -48,8 +40,9 @@ export function NewProjectPage() {
   const fieldErrors = {
     title: !title.trim() ? 'Title is required.' : '',
     description: !description.trim() ? 'Description is required.' : '',
-    timeline: !timeline.trim() ? 'Timeline is required.' : '',
-    rolesNeeded: !rolesNeeded.trim() ? 'At least one role is required.' : '',
+    requirements: !requirements.trim() ? 'At least one requirement is required.' : '',
+    budget: !budget.trim() ? 'Budget is required.' : '',
+    duration: !duration.trim() ? 'Duration is required.' : '',
   };
   const isFormValid = Object.values(fieldErrors).every(e => !e);
 
@@ -59,7 +52,7 @@ export function NewProjectPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setTouched({ title: true, description: true, timeline: true, rolesNeeded: true });
+    setTouched({ title: true, description: true, requirements: true, budget: true, duration: true });
     setLoading(true);
 
     // Focus first invalid field
@@ -73,29 +66,33 @@ export function NewProjectPage() {
       setLoading(false);
       return;
     }
-    if (fieldErrors.timeline) {
-      timelineRef.current?.focus();
+    if (fieldErrors.requirements) {
+      requirementsRef.current?.focus();
       setLoading(false);
       return;
     }
-    if (fieldErrors.rolesNeeded) {
-      rolesRef.current?.focus();
+    if (fieldErrors.budget) {
+      budgetRef.current?.focus();
+      setLoading(false);
+      return;
+    }
+    if (fieldErrors.duration) {
+      durationRef.current?.focus();
       setLoading(false);
       return;
     }
 
     const tagList = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
-    const rolesList = rolesNeeded.split(',').map((r: string) => r.trim()).filter(Boolean);
+    const requirementsList = requirements.split(',').map((r: string) => r.trim()).filter(Boolean);
 
     createProject({
       title: title.trim(),
       description: description.trim(),
       authorId: user.id,
-      timeline: timeline.trim(),
-      rolesNeeded: rolesList,
-      type,
+      requirements: requirementsList,
+      budget: budget.trim(),
+      duration: duration.trim(),
       tags: tagList,
-      isActive,
       location: location.trim() || undefined,
       isRemote,
     });
@@ -138,30 +135,50 @@ export function NewProjectPage() {
           {touched.description && fieldErrors.description && <div className="text-red-500 text-sm mt-1">{fieldErrors.description}</div>}
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Project Type</label>
-          <select className="w-full border border-gray-300 rounded-lg px-3 py-2" value={type} onChange={(e: ChangeEvent<HTMLSelectElement>) => setType(e.target.value as ProjectType)}>
-            {PROJECT_TYPES.map((pt) => (
-              <option key={pt.id} value={pt.id}>{pt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
           <label className="block text-sm font-medium mb-1">Tags (comma separated)</label>
           <input type="text" className="w-full border border-gray-300 rounded-lg px-3 py-2" value={tags} onChange={(e: ChangeEvent<HTMLInputElement>) => setTags(e.target.value)} placeholder="e.g. AI, Machine Learning, Biotech" />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Timeline<span className="text-red-500">*</span></label>
+          <label className="block text-sm font-medium mb-1">Requirements (comma separated)<span className="text-red-500">*</span></label>
           <input
-            ref={timelineRef}
+            ref={requirementsRef}
             type="text"
-            className={`w-full border ${touched.timeline && fieldErrors.timeline ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2`}
-            value={timeline}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setTimeline(e.target.value)}
-            onBlur={() => handleBlur('timeline')}
+            className={`w-full border ${touched.requirements && fieldErrors.requirements ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2`}
+            value={requirements}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setRequirements(e.target.value)}
+            onBlur={() => handleBlur('requirements')}
+            placeholder="e.g. Python, TensorFlow, PhD in relevant field"
             required
-            placeholder="e.g. 6 months"
           />
-          {touched.timeline && fieldErrors.timeline && <div className="text-red-500 text-sm mt-1">{fieldErrors.timeline}</div>}
+          {touched.requirements && fieldErrors.requirements && <div className="text-red-500 text-sm mt-1">{fieldErrors.requirements}</div>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Budget<span className="text-red-500">*</span></label>
+          <input
+            ref={budgetRef}
+            type="text"
+            className={`w-full border ${touched.budget && fieldErrors.budget ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2`}
+            value={budget}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setBudget(e.target.value)}
+            onBlur={() => handleBlur('budget')}
+            placeholder="e.g. $50,000 - $100,000"
+            required
+          />
+          {touched.budget && fieldErrors.budget && <div className="text-red-500 text-sm mt-1">{fieldErrors.budget}</div>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Duration<span className="text-red-500">*</span></label>
+          <input
+            ref={durationRef}
+            type="text"
+            className={`w-full border ${touched.duration && fieldErrors.duration ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2`}
+            value={duration}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setDuration(e.target.value)}
+            onBlur={() => handleBlur('duration')}
+            placeholder="e.g. 6-12 months"
+            required
+          />
+          {touched.duration && fieldErrors.duration && <div className="text-red-500 text-sm mt-1">{fieldErrors.duration}</div>}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Location</label>
@@ -170,24 +187,6 @@ export function NewProjectPage() {
         <div className="flex items-center gap-2">
           <input type="checkbox" id="remote" checked={isRemote} onChange={(e: ChangeEvent<HTMLInputElement>) => setIsRemote(e.target.checked)} />
           <label htmlFor="remote" className="text-sm font-medium">Remote OK</label>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Roles Needed (comma separated)<span className="text-red-500">*</span></label>
-          <input
-            ref={rolesRef}
-            type="text"
-            className={`w-full border ${touched.rolesNeeded && fieldErrors.rolesNeeded ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2`}
-            value={rolesNeeded}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setRolesNeeded(e.target.value)}
-            onBlur={() => handleBlur('rolesNeeded')}
-            placeholder="e.g. ML Engineer, Research Intern"
-            required
-          />
-          {touched.rolesNeeded && fieldErrors.rolesNeeded && <div className="text-red-500 text-sm mt-1">{fieldErrors.rolesNeeded}</div>}
-        </div>
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="active" checked={isActive} onChange={(e: ChangeEvent<HTMLInputElement>) => setIsActive(e.target.checked)} />
-          <label htmlFor="active" className="text-sm font-medium">Project is Active</label>
         </div>
         <button
           type="submit"
