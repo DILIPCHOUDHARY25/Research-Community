@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useApp } from '../contexts/AppContext';
 import { User as UserIcon, Mail, MapPin, Calendar, ExternalLink, Github, Linkedin, Globe, Edit3, Save, X } from 'lucide-react';
 
 export function ProfilePage() {
   const { user, updateProfile } = useAuth();
+  const { projects, applications } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -93,6 +95,16 @@ export function ProfilePage() {
       </div>
     );
   }
+
+  // Projects posted by the user
+  const postedProjects = projects.filter(p => p.authorId === user.id);
+  // Applications by the user
+  const myApplications = applications.filter(app => app.userId === user.id);
+  // Projects the user applied to
+  const appliedProjects = myApplications.map(app => {
+    const project = projects.find(p => p.id === app.projectId);
+    return project ? { project, application: app } : null;
+  }).filter(Boolean) as { project: typeof projects[0], application: typeof applications[0] }[];
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -355,6 +367,42 @@ export function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* User's Projects & Applications Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Posted Projects</h2>
+        {postedProjects.length === 0 ? (
+          <p className="text-gray-600">You haven't posted any projects yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {postedProjects.map(project => (
+              <li key={project.id} className="border-b last:border-b-0 pb-2">
+                <span className="font-medium text-blue-700">{project.title}</span>
+                <span className="ml-2 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{project.type}</span>
+                <span className="ml-2 text-xs px-2 py-1 rounded-full {project.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}">{project.isActive ? 'Active' : 'Inactive'}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Projects You've Applied To</h2>
+        {appliedProjects.length === 0 ? (
+          <p className="text-gray-600">You haven't applied to any projects yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {appliedProjects.map(({ project, application }) => (
+              <li key={project.id} className="border-b last:border-b-0 pb-2">
+                <span className="font-medium text-blue-700">{project.title}</span>
+                <span className="ml-2 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{project.type}</span>
+                <span className={`ml-2 text-xs px-2 py-1 rounded-full ${application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : application.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
