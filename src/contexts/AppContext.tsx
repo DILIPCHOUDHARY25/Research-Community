@@ -1,5 +1,22 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Project, Application, Message, Conversation, User } from '../types';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs, addDoc, Timestamp, query, orderBy } from 'firebase/firestore';
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyCYPUPc6wZrqP1-Y5TUieIcDaXtUolJrJs",
+  authDomain: "research-community-ce9af.firebaseapp.com",
+  projectId: "research-community-ce9af",
+  storageBucket: "research-community-ce9af.firebasestorage.app",
+  messagingSenderId: "426974432294",
+  appId: "1:426974432294:web:d5dcfcb020e2808fc5aae7",
+  measurementId: "G-Z925P35N21"
+};
+
+// Initialize Firebase
+const firebaseApp = initializeApp(firebaseConfig);
+export const db = getFirestore(firebaseApp);
 
 interface AppContextType {
   projects: Project[];
@@ -7,7 +24,7 @@ interface AppContextType {
   messages: Message[];
   conversations: Conversation[];
   users: User[];
-  createProject: (project: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => void;
+  createProject: (project: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => Promise<void>;
   applyToProject: (projectId: string, message: string) => void;
   sendMessage: (receiverId: string, content: string) => void;
   getConversation: (userId: string) => Conversation | null;
@@ -82,51 +99,9 @@ const mockUsers: User[] = [
   },
 ];
 
-const defaultProjects: Project[] = [
-  {
-    id: '1',
-    title: 'AI-Powered Drug Discovery Platform',
-    description: 'Looking for ML engineers to help build a platform that uses transformer models to predict drug-protein interactions. Great opportunity to work on cutting-edge research with real-world impact.',
-    authorId: '2',
-    author: mockUsers[1],
-    timeline: '6 months',
-    rolesNeeded: ['ML Engineer', 'Research Intern', 'Data Scientist'],
-    type: 'startup',
-    tags: ['AI', 'Machine Learning', 'Biotech', 'Drug Discovery'],
-    applications: [],
-    createdAt: new Date('2024-02-15'),
-    isActive: true,
-    isRemote: true,
-  },
-  {
-    id: '2',
-    title: 'Quantum Error Correction Research',
-    description: 'Seeking passionate undergraduate/graduate students to join our quantum computing research lab. Focus on developing new error correction codes for NISQ devices.',
-    authorId: '3',
-    author: mockUsers[2],
-    timeline: '1 year',
-    rolesNeeded: ['Research Assistant', 'PhD Student'],
-    type: 'collaboration',
-    tags: ['Quantum Computing', 'Physics', 'Mathematics', 'Research'],
-    applications: [],
-    createdAt: new Date('2024-02-10'),
-    isActive: true,
-    location: 'Cambridge, MA',
-    isRemote: false,
-  },
-];
-
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Load from localStorage or use defaults
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const stored = localStorage.getItem('projects');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Convert date strings back to Date objects
-      return parsed.map((p: any) => ({ ...p, createdAt: new Date(p.createdAt) }));
-    }
-    return defaultProjects;
-  });
+  // Projects from Firestore
+  const [projects, setProjects] = useState<Project[]>([]);
   const [applications, setApplications] = useState<Application[]>(() => {
     const stored = localStorage.getItem('applications');
     if (stored) {
@@ -139,25 +114,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users] = useState<User[]>(mockUsers);
 
-  // Persist projects and applications to localStorage
+  // Load projects from Firestore on mount
   useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
-  }, [projects]);
+    const fetchProjects = async () => {
+      const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const loaded: Project[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        loaded.push({
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        });
+      });
+      setProjects(loaded);
+    };
+    fetchProjects();
+  }, []);
+
+  // Persist applications to localStorage
   useEffect(() => {
     localStorage.setItem('applications', JSON.stringify(applications));
   }, [applications]);
 
-  const createProject = (projectData: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => {
+  // Add new project to Firestore
+  const createProject = async (projectData: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => {
     const author = users.find(u => u.id === projectData.authorId);
     if (!author) return;
-    const newProject: Project = {
+    const newProject = {
       ...projectData,
-      id: Date.now().toString(),
       author,
       applications: [],
-      createdAt: new Date(),
+      createdAt: Timestamp.fromDate(new Date()),
     };
-    setProjects(prev => [newProject, ...prev]);
+    const docRef = await addDoc(collection(db, 'projects'), newProject);
+    setProjects(prev => [{ ...newProject, id: docRef.id, createdAt: new Date() }, ...prev]);
   };
 
   const applyToProject = (projectId: string, message: string) => {
