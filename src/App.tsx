@@ -12,6 +12,7 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { NewProjectPage } from './pages/NewProjectPage';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/projects/new" element={<NewProjectPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
                 <Route path="/messages" element={<MessagesPage />} />
