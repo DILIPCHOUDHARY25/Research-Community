@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Project, Application, Message, Conversation, User } from '../types';
 
 interface AppContextType {
@@ -82,50 +82,74 @@ const mockUsers: User[] = [
   },
 ];
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: '1',
-      title: 'AI-Powered Drug Discovery Platform',
-      description: 'Looking for ML engineers to help build a platform that uses transformer models to predict drug-protein interactions. Great opportunity to work on cutting-edge research with real-world impact.',
-      authorId: '2',
-      author: mockUsers[1],
-      timeline: '6 months',
-      rolesNeeded: ['ML Engineer', 'Research Intern', 'Data Scientist'],
-      type: 'startup',
-      tags: ['AI', 'Machine Learning', 'Biotech', 'Drug Discovery'],
-      applications: [],
-      createdAt: new Date('2024-02-15'),
-      isActive: true,
-      isRemote: true,
-    },
-    {
-      id: '2',
-      title: 'Quantum Error Correction Research',
-      description: 'Seeking passionate undergraduate/graduate students to join our quantum computing research lab. Focus on developing new error correction codes for NISQ devices.',
-      authorId: '3',
-      author: mockUsers[2],
-      timeline: '1 year',
-      rolesNeeded: ['Research Assistant', 'PhD Student'],
-      type: 'collaboration',
-      tags: ['Quantum Computing', 'Physics', 'Mathematics', 'Research'],
-      applications: [],
-      createdAt: new Date('2024-02-10'),
-      isActive: true,
-      location: 'Cambridge, MA',
-      isRemote: false,
-    },
-  ]);
+const defaultProjects: Project[] = [
+  {
+    id: '1',
+    title: 'AI-Powered Drug Discovery Platform',
+    description: 'Looking for ML engineers to help build a platform that uses transformer models to predict drug-protein interactions. Great opportunity to work on cutting-edge research with real-world impact.',
+    authorId: '2',
+    author: mockUsers[1],
+    timeline: '6 months',
+    rolesNeeded: ['ML Engineer', 'Research Intern', 'Data Scientist'],
+    type: 'startup',
+    tags: ['AI', 'Machine Learning', 'Biotech', 'Drug Discovery'],
+    applications: [],
+    createdAt: new Date('2024-02-15'),
+    isActive: true,
+    isRemote: true,
+  },
+  {
+    id: '2',
+    title: 'Quantum Error Correction Research',
+    description: 'Seeking passionate undergraduate/graduate students to join our quantum computing research lab. Focus on developing new error correction codes for NISQ devices.',
+    authorId: '3',
+    author: mockUsers[2],
+    timeline: '1 year',
+    rolesNeeded: ['Research Assistant', 'PhD Student'],
+    type: 'collaboration',
+    tags: ['Quantum Computing', 'Physics', 'Mathematics', 'Research'],
+    applications: [],
+    createdAt: new Date('2024-02-10'),
+    isActive: true,
+    location: 'Cambridge, MA',
+    isRemote: false,
+  },
+];
 
-  const [applications, setApplications] = useState<Application[]>([]);
+export function AppProvider({ children }: { children: ReactNode }) {
+  // Load from localStorage or use defaults
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const stored = localStorage.getItem('projects');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Convert date strings back to Date objects
+      return parsed.map((p: any) => ({ ...p, createdAt: new Date(p.createdAt) }));
+    }
+    return defaultProjects;
+  });
+  const [applications, setApplications] = useState<Application[]>(() => {
+    const stored = localStorage.getItem('applications');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.map((a: any) => ({ ...a, createdAt: new Date(a.createdAt) }));
+    }
+    return [];
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users] = useState<User[]>(mockUsers);
 
+  // Persist projects and applications to localStorage
+  useEffect(() => {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  }, [projects]);
+  useEffect(() => {
+    localStorage.setItem('applications', JSON.stringify(applications));
+  }, [applications]);
+
   const createProject = (projectData: Omit<Project, 'id' | 'author' | 'applications' | 'createdAt'>) => {
     const author = users.find(u => u.id === projectData.authorId);
     if (!author) return;
-
     const newProject: Project = {
       ...projectData,
       id: Date.now().toString(),
@@ -133,22 +157,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applications: [],
       createdAt: new Date(),
     };
-
     setProjects(prev => [newProject, ...prev]);
   };
 
   const applyToProject = (projectId: string, message: string) => {
     // Mock application - would normally require authentication
+    const userId = localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')!).id : '1';
+    const user = users.find(u => u.id === userId) || users[0];
     const newApplication: Application = {
       id: Date.now().toString(),
-      userId: '1', // Mock current user
-      user: mockUsers[0],
+      userId: user.id,
+      user,
       projectId,
       message,
       status: 'pending',
       createdAt: new Date(),
     };
-
     setApplications(prev => [...prev, newApplication]);
   };
 
@@ -161,12 +185,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       timestamp: new Date(),
       read: false,
     };
-
     setMessages(prev => [...prev, newMessage]);
   };
 
   const getConversation = (userId: string): Conversation | null => {
-    return conversations.find(c => 
+    return conversations.find(c =>
       c.participants.some(p => p.id === userId)
     ) || null;
   };
